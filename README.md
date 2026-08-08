@@ -4,7 +4,7 @@ title: devicex — the Go package
 
 # devicex
 
-Android model code → the device it names.
+Device model code → the device it names.
 
 ```go
 d, ok := devicex.Lookup("SM-G973F")

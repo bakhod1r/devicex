@@ -1,13 +1,13 @@
 ---
 title: devicex
-description: An Android model code, resolved to the device it names.
+description: A device model code, resolved to the device it names.
 permalink: /
 ---
 
 # devicex
 
-An Android model code, resolved to the device it names — as a Go package, and
-as static JSON anyone can fetch.
+A device model code, resolved to the device it names — as a Go package, and
+as static JSON anyone can fetch. (Includes Android devices, Apple devices, and gaming consoles).
 
 <p style="font-size:1.05rem"><strong><a href="lookup.html">Look up a code →</a></strong></p>
 

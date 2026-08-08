@@ -1,4 +1,4 @@
-// Package devicex resolves an Android model code to the device it names.
+// Package devicex resolves a device model code to the device it names.
 //
 // A User-Agent from an Android phone carries a model code — "SM-S928B",
 // "CPH2451", "2201116SG" — and nothing else about the hardware. The code is
