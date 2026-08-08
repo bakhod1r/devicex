@@ -6,6 +6,48 @@ where the shipped data came from.
 
 ---
 
+## v0.2.0 — the rules became callable
+
+v0.1.0 exported `Rules` as data and no way to evaluate it. Every consumer that
+wanted the Apple, console and code-shape rules had to re-implement the walk,
+including the parts that are not obvious: rules are ordered by descending
+priority, and within one priority a longer prefix is listed before the shorter
+one it would otherwise shadow. That knowledge belongs with the data.
+
+Added, all backwards compatible:
+
+- `Resolve(code, ua)` — the catalogue, the shape rules and the User-Agent rules
+  in one answer. The catalogue decides first, because a record names the
+  specific handset and a rule never can; the rules then fill in the form factor
+  and product line the catalogue does not carry. Returns the matching `Rule`,
+  whose `ID` names what produced the answer.
+- `ResolveCode(code)` and `ResolveUA(ua)` for the two kinds of evidence
+  separately. `MatchContains` rules describe prose in a User-Agent
+  (`PlayStation 5`, `Nintendo Switch`) and are never tested against a model
+  code; prefix rules are never tested against a whole User-Agent.
+- `Describe(code, ua) (name, brand, family, deviceType string, confidence
+  float64, ok bool)` — `Resolve` behind a signature naming no type from this
+  package, so a consumer can accept it as a function value without importing
+  adx. `Names` only reached the catalogue, which left it silent about iPhones,
+  consoles, and any handset newer than the catalogue.
+- `Code(field)` strips the build fingerprint Android appends to the model
+  field: `"SM-A546E Build/UP1A.231005.007"` → `"SM-A546E"`. The suffix is what
+  turns a catalogue hit into a miss, and the shape of a model code is this
+  package's subject.
+
+Rules:
+
+- Samsung tablet code spaces `SM-T`, `SM-X` and `SM-P` now assert
+  `TypeTablet` and the Galaxy Tab family, above the plain `SM-` rule they would
+  otherwise be shadowed by. The catalogue holds 331 of these and records no
+  form factor — the Play Console export that carries one omits the `Model`
+  column, so it cannot be imported. `KF` (Kindle Fire) likewise asserts
+  `TypeTablet`.
+
+`Rules` is unchanged in shape and remains exported. `Confidence` stays
+`float64`; a caller wanting `float32` converts at its own boundary rather than
+having this package pick the narrower type for everyone.
+
 ## v0.1.0 — first release
 
 Extracted from [uax](https://github.com/bakhod1r/uax), where the same data

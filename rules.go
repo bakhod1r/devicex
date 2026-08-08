@@ -135,6 +135,19 @@ var Rules = []Rule{
 	// ------------------------------------------------ brand shapes (tier 2)
 	//
 	// Brand only — never a model name.
+
+	// Samsung allocates tablets their own letters inside the SM- space: T and
+	// P for the Galaxy Tab line, X since 2022. The catalogue holds 331 of them
+	// and records no form factor, so without these the only evidence a parser
+	// has that a Galaxy Tab S9 is a tablet is the absence of a "Mobile" token
+	// in the User-Agent — which some tablet browsers send anyway. These sit
+	// above the plain "SM-" rule, which they would otherwise be shadowed by,
+	// and claim the same brand at the same confidence: the extra letter adds a
+	// form factor, not certainty about the maker.
+	{ID: "samsung_prefix_sm_t", Brand: "Samsung", Family: "Galaxy Tab", Type: TypeTablet, Priority: 110, Match: MatchPrefix, Value: "SM-T", Confidence: 0.93},
+	{ID: "samsung_prefix_sm_x", Brand: "Samsung", Family: "Galaxy Tab", Type: TypeTablet, Priority: 110, Match: MatchPrefix, Value: "SM-X", Confidence: 0.93},
+	{ID: "samsung_prefix_sm_p", Brand: "Samsung", Family: "Galaxy Tab", Type: TypeTablet, Priority: 110, Match: MatchPrefix, Value: "SM-P", Confidence: 0.93},
+
 	{ID: "samsung_prefix_sm", Brand: "Samsung", Priority: 100, Match: MatchPrefix, Value: "SM-", Confidence: 0.93},
 	{ID: "samsung_prefix_sm_underscore", Brand: "Samsung", Priority: 100, Match: MatchPrefix, Value: "SM_", Confidence: 0.90},
 	{ID: "samsung_prefix_sch", Brand: "Samsung", Priority: 100, Match: MatchPrefix, Value: "SCH-", Confidence: 0.90},
@@ -170,7 +183,7 @@ var Rules = []Rule{
 
 	// Kindle Fire tablets. Amazon has used KF* since 2012 and ships nothing
 	// else under it.
-	{ID: "amazon_prefix", Brand: "Amazon", Priority: 100, Match: MatchPrefix, Value: "KF", Confidence: 0.88},
+	{ID: "amazon_prefix", Brand: "Amazon", Type: TypeTablet, Priority: 100, Match: MatchPrefix, Value: "KF", Confidence: 0.88},
 
 	{ID: "vivo_prefix", Brand: "vivo", Priority: 100, Match: MatchPrefix, Value: "vivo ", Confidence: 0.93},
 

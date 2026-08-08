@@ -9,10 +9,17 @@
 //	d, ok := adx.Lookup("SM-G973F")
 //	// d.Brand = "Samsung", d.Name = "Galaxy S10"
 //
-// This package is the catalogue and nothing else. It parses no User-Agents, has
-// no dependencies, and holds no state. It is separate from the parser that
-// usually consumes it so that the data can be updated on its own schedule:
-// phones ship weekly, parsers do not.
+// This package is the catalogue and the rules that read a model code's shape.
+// It parses no User-Agents, has no dependencies, and holds no state. It is
+// separate from the parser that usually consumes it so that the data can be
+// updated on its own schedule: phones ship weekly, parsers do not.
+//
+// Lookup is the catalogue alone. Resolve is everything the package knows about
+// one request — the catalogue, the code-shape rules, and the rules for
+// hardware that carries no model code at all:
+//
+//	r, ok := adx.Resolve(adx.Code(field), ua)
+//	// r.Name, r.Brand, r.Type, r.Family, r.Confidence, and r.ID: what answered
 //
 // # What it will not do
 //

@@ -56,12 +56,40 @@ adx.Brands()   // every manufacturer, sorted
 adx.Source     // where the data came from
 ```
 
+### Everything at once
+
+`Resolve` answers from the catalogue, the code-shape rules and the User-Agent
+rules together, in that order of authority:
+
+```go
+code := adx.Code("SM-T870 Build/UP1A.231005.007")  // strips the build suffix
+
+r, ok := adx.Resolve(code, ua)
+// r.Name = "Galaxy Tab S7", r.Brand = "Samsung", r.Type = adx.TypeTablet
+// r.ID   = "catalog" — what produced the answer
+
+adx.Resolve("", "Mozilla/5.0 (PlayStation; PlayStation 5/9.60) …")
+// PlayStation 5 / Sony / Console — hardware that carries no model code
+```
+
+`ResolveCode` and `ResolveUA` take the two kinds of evidence separately. Prefix
+rules are never tested against a whole User-Agent, and the `MatchContains`
+rules that describe prose are never tested against a model code.
+
+For a consumer that will not import this package, `Describe` is the same answer
+in a signature naming no type from it:
+
+```go
+name, brand, family, deviceType, confidence, ok := adx.Describe(code, ua)
+```
+
 ## Two tiers, deliberately separate
 
 | | Answers | How | When unknown |
 |---|---|---|---|
 | `Lookup` | which handset | catalogue record | `false` — **never approximated** |
 | `BrandOf` | which manufacturer | the code's shape | `false` |
+| `Resolve` | both, plus form factor | record first, then shape | `false` |
 
 The split matters. Manufacturers allocate codes in per-vendor spaces, so `SM-`
 has meant Samsung for two decades and a phone released tomorrow still resolves
