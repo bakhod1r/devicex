@@ -13,9 +13,11 @@ Currently, only the latest release of ADX is actively supported for security upd
 
 Security is a top priority for us. If you discover a security vulnerability in this project, please DO NOT report it by creating a public GitHub issue. 
 
-Instead, please report it privately:
+Instead, please report it privately through GitHub:
 
-1. **Email**: Send an email to the project maintainers detailing the vulnerability.
+1. **Where**: Open a private report at
+   [Security → Report a vulnerability](https://github.com/bakhod1r/adx/security/advisories/new).
+   The report is visible only to the maintainers until an advisory is published.
 2. **Details**: Please provide as much information as possible, including:
    - A description of the vulnerability.
    - Steps to reproduce the issue.

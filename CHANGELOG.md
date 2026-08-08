@@ -14,16 +14,17 @@ it lets the catalogue be updated on its own schedule and keeps the parser's
 binary small for callers who do not need device names.
 
 - `Lookup` resolves a model code to its brand and marketing name. Exact match,
-  binary search over a sorted generated array: 31 ns, zero allocations, nothing
-  built at init.
+  binary search over a sorted generated array: ~50 ns on an M4 Pro, zero
+  allocations, nothing built at init.
 - `LookupFold` for input whose case is unreliable.
 - `BrandOf` resolves the manufacturer from the code's shape when the catalogue
   has no record, so handsets released after this build still resolve their
   maker.
 - `All`, `Len`, `Brands`, `Source`.
-- Importer reads Google Play Console CSV (UTF-16LE), the pbakondy JSON list, or
-  the YAML this catalogue was extracted from. It refuses to run without a
-  `-source` citation.
+- Importer (`gen/`) reads the Google Play Console supported-devices CSV
+  (UTF-16LE) or the pbakondy JSON list. It refuses to run without a `-source`
+  citation, and refuses an export whose `Model` column is missing rather than
+  building a catalogue keyed on something a User-Agent never carries.
 - Brand spellings are normalised on import, so one manufacturer is one brand.
   Xiaomi sub-brands (`Redmi`, `POCO`) report `Xiaomi`.
 - Rows whose model column holds a word rather than a code (`Android`, `Linux`,

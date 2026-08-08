@@ -10,7 +10,7 @@ First off, thank you for considering contributing to ADX! It's people like you t
 
 ## Development Setup
 
-To get started with development, you'll need Go 1.21 or higher installed on your machine.
+To get started with development, you'll need Go 1.26 or higher installed on your machine, as declared in `go.mod`.
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/your-username/adx.git`
@@ -22,7 +22,9 @@ To get started with development, you'll need Go 1.21 or higher installed on your
 - `adx.go`: Contains the core logic for resolving Android device codes.
 - `brand.go`: Contains brand shape and prefix logic.
 - `rules.go`: Fallback custom device matching logic.
+- `names.go`: Dependency-free accessor for consumers that want only the strings.
 - `internal/catalog/`: Contains the generated catalogue `catalog_gen.go` which provides the exhaustive Android device mappings.
+- `gen/`: The importer that produces `internal/catalog/catalog_gen.go`. Edit the transformations here, never the generated file — see `make catalog`.
 
 ## Writing Tests
 

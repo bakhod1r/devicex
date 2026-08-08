@@ -13,6 +13,7 @@ header_pages:
   - CONTRIBUTING.md
   - SECURITY.md
   - CODE_OF_CONDUCT.md
+  - NOTICE.md
 
 exclude:
   - "*.go"

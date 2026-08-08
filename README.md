@@ -7,7 +7,7 @@ d, ok := adx.Lookup("SM-G973F")
 // d.Brand = "Samsung", d.Name = "Galaxy S10"
 ```
 
-12,260 devices. 31 ns per lookup, zero allocations, zero dependencies.
+12,260 devices. ~50 ns per lookup, zero allocations, zero dependencies.
 
 ---
 
@@ -110,7 +110,8 @@ licensing of the bundled data.
 
 - **Sorted array, binary search.** No map, so nothing is built at init and the
   strings live in read-only memory. Startup cost is zero and lookup is ~14
-  comparisons.
+  comparisons — 50 ns on an M4 Pro, and `make bench` reports the number for
+  your own machine rather than asking you to trust this one.
 - **Generated Go, not embedded YAML or JSON.** The catalogue is bulk imported
   data with no hand-written rows, so a parseable format would buy nothing and
   cost megabytes plus a decode at startup.
