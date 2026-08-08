@@ -19,7 +19,7 @@
 // hardware that carries no model code at all:
 //
 //	r, ok := devicex.Resolve(devicex.Code(field), ua)
-//	// r.Name, r.Brand, r.Type, r.Family, r.Confidence, and r.ID: what answered
+//	// r.Name, r.Brand, r.Model, r.Type, r.Family, r.Confidence, and r.ID
 //
 // # What it will not do
 //

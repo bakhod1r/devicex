@@ -36,16 +36,19 @@ r, ok := devicex.Resolve(devicex.Code(field), ua)
 
 ## Over HTTP
 
-The JSON under `api/` is the API. A shard is named after the first two
+The JSON under `api/` is the API. Every code has its own document; the shards
+are for a client resolving many at once, and are named after the first two
 characters of a code, so a lookup transfers kilobytes rather than a catalogue:
 
 ```sh
-curl -s https://bakhod1r.github.io/devicex/api/SM.json | jq '.["SM-S928B"]'
-# ["Samsung", "Galaxy S24 Ultra"]
+curl -s https://bakhod1r.github.io/devicex/api/d/SM-S928B.json
+# {"code":"SM-S928B","ok":true,"id":"catalog","name":"Galaxy S24 Ultra",
+#  "brand":"Samsung","model":"SM-S928B","confidence":0.99}
 ```
 
 | File | What it holds |
 |---|---|
+| `api/d/<code>.json` | one code, the whole answer — `api/d/SM-S928B.json` |
 | `api/XX.json` | every catalogued code starting `XX`, as `{code: [brand, name]}` |
 | `api/rules.json` | the code-shape rules, for codes the catalogue does not hold |
 | `api/meta.json` | snapshot date, device count, source |

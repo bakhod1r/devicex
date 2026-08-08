@@ -44,6 +44,7 @@ catalog-full:
 # Serve the Pages site locally. The API is static files, so this needs nothing
 # but a file server; what runs in production is the same directory.
 #
-#   make site   then open http://localhost:8000/lookup.html#SM-S928B
+#   make site   then curl http://localhost:8000/api/d/SM-S928B.json
+#               or open http://localhost:8000/lookup.html#SM-S928B
 site:
 	python3 -m http.server 8000

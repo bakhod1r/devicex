@@ -60,6 +60,13 @@ Catalogue, rebuilt from a source that is still maintained:
 
 Static lookup API:
 
+- `api/d/<code>.json` — one document per model code, 25287 of them, each the
+  whole answer: `{"code","ok","id","name","brand","model","confidence"}`, plus
+  `family` and `type` where a rule identifies them. 137 bytes gzipped, no client
+  code, no page. A code with no document is a 404, which is the answer: not in
+  the catalogue. Codes differing from another only in case have no document —
+  a macOS or Windows checkout cannot hold both files — and a `/` in a code is
+  percent-encoded into the filename.
 - `lookup.html`, `404.html` and `api/` — the catalogue as sharded JSON on
   GitHub Pages, and an ES module that reads it. `/d/SM-S928B` resolves in the
   browser: Pages serves `404.html` for the unpublished path, and the router

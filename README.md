@@ -90,44 +90,50 @@ name, brand, model, family, deviceType, confidence, ok := devicex.Describe(code,
 
 ## The same catalogue over HTTP
 
-The Pages site resolves a code in the browser at a plain path — `/d/SM-S928B`.
-There is no server behind it: `404.html` is what Pages returns for a path it
-does not publish, and that page reads the path it was asked for and answers it.
-`/?code=…` and `/#…` resolve the same code and are rewritten to the canonical
-form. The page is only a reader for static JSON under `api/`, and those files
-are the API.
+Every code has its own JSON document, at a path that is the code. No server, no
+client library, no page to render — a GET returns the answer:
 
+```sh
+curl -s https://bakhod1r.github.io/devicex/api/d/SM-S928B.json
 ```
-GET api/SM.json       {"SM-S928B": ["Samsung", "Galaxy S24 Ultra"], …}
-GET api/rules.json    the code-shape rules, for codes the catalogue does not hold
-GET api/meta.json     snapshot date, device count, source
+```json
+{"code":"SM-S928B","ok":true,"id":"catalog","name":"Galaxy S24 Ultra",
+ "brand":"Samsung","model":"SM-S928B","confidence":0.99}
 ```
 
-A shard is named after the first two characters of a code, uppercased, with
-anything that is not a letter or digit replaced by `_` — so a lookup costs one
-request of a few kilobytes rather than the whole catalogue. `api/devicex.js` is
-an ES module doing the same three-step resolution as the Go package:
+`family` and `type` appear when a rule identifies them, exactly as `Resolve`
+reports them: `api/d/SM-X710.json` carries `"family":"Galaxy Tab"` and
+`"type":"Tablet"`. A code the catalogue does not hold has no document, and the
+404 is the answer — not in the catalogue. Nothing is approximated.
 
-```js
-import { Devicex, parseCode } from './api/devicex.js';
-
-const dx = new Devicex('./api/');
-await dx.resolve(parseCode('SM-S928B Build/UP1A.231005.007'));
-// { id: 'catalog', name: 'Galaxy S24 Ultra', brand: 'Samsung', model: 'SM-S928B', confidence: 0.99 }
 ```
+GET api/d/SM-S928B.json   one code, the whole answer            137 B gzipped
+GET api/SM.json           every code starting SM, {code: [brand, name]}  11 KB
+GET api/rules.json        the code-shape rules                    1 KB
+GET api/meta.json         snapshot date, device count, source
+```
+
+The shards are for a client resolving many codes at once: one request covers a
+whole code space, and a shard is named after the first two characters of a code,
+uppercased, with anything that is not a letter or digit replaced by `_`. The rule
+table is what turns a 404 into a manufacturer — `SM-` is Samsung whether or not
+that handset is catalogued.
+
+Two things to know about the paths. A code containing `/` has it percent-encoded
+in the filename, so the URL carries it twice-encoded:
+`api/d/Doro%208030%252F8031%252F8028.json`. And 188 codes that differ from
+another only in case — almost all of them television model strings like
+`2K SMART TV` and `2K Smart TV` — have no document at all, because a macOS or
+Windows checkout of this repository cannot hold both files. They are in the
+shards.
+
+`lookup.html` is a reader for the same files, and `/d/SM-S928B` renders in the
+browser: Pages serves `404.html` for the unpublished path and it answers from
+the path it was asked for. Anything programmatic should use `api/d/…` instead,
+where a hit is a 200 and a miss is a real 404.
 
 Rebuild the Go catalogue and the JSON together with `make catalog-full`, and
-serve the site locally with `make site`.
-
-A cold lookup is two round trips, not four: the page requests the shard and the
-rule table from a blocking script before the module that uses them is parsed,
-and the biggest shard — every `SM` code, 2437 of them — is 13 KB gzipped. Shards
-are kept for the tab's session, so a second lookup touches no network at all.
-
-One caveat worth knowing: a `/d/…` URL is served by the 404 fallback, so it
-carries HTTP 404 even when it renders an answer. That is the cost of pretty
-paths on a host that runs nothing. Anything programmatic should read `api/`
-directly, where a hit is a 200 and a miss is a real 404.
+serve them locally with `make site`.
 
 ## Two tiers, deliberately separate
 

@@ -11,3 +11,4 @@ bench.txt
 # …except the published lookup API, which is generated but is the site: those
 # files are what GitHub Pages serves.
 !api/*.json
+!api/d/*.json
