@@ -36,5 +36,5 @@ jobs:
       - name: No dependencies
         run: |
           if [ -s go.sum ]; then
-            echo "::error::adx gained a dependency"; cat go.sum; exit 1
+            echo "::error::devicex gained a dependency"; cat go.sum; exit 1
           fi

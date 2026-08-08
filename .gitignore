@@ -7,3 +7,7 @@ bench.txt
 # internal/catalog is the artefact worth committing.
 *.csv
 *.json
+
+# …except the published lookup API, which is generated but is the site: those
+# files are what GitHub Pages serves.
+!api/*.json

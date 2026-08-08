@@ -1,10 +1,10 @@
-title: ADX - Android Device Resolver
-description: A fast, offline, and reliable Android device catalogue and code resolver for Go.
+title: devicex — Android device catalogue
+description: 25475 Android model codes resolved to their marketing names, in Go and as static JSON.
 theme: jekyll-theme-primer
 show_downloads: true
 github:
   is_project_page: true
-  repository_url: https://github.com/bakhod1r/adx
+  repository_url: https://github.com/bakhod1r/devicex
 
 # Navigation configuration
 header_pages:

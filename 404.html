@@ -1,0 +1,91 @@
+---
+layout: null
+permalink: /404.html
+---
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>devicex — model code lookup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+
+<!--
+  The router.
+
+  GitHub Pages serves this file for any path that does not exist, which is what
+  makes /d/SM-S928B work: nothing of that name is published, Pages falls back
+  here, and the module below reads the path it was asked for and answers it. The
+  address bar keeps the URL as typed, so it can be shared and bookmarked.
+
+  A path that is not /d/... lands here too, and gets the empty lookup page —
+  which is a better 404 for this site than a message saying the file is missing.
+
+  Everything above the module import is arranged around one number: the round
+  trips between a cold click and an answer. The stylesheet and both modules are
+  requested from the markup, and the two JSON files the answer needs are fetched
+  by the blocking script below — before the module that will use them has been
+  parsed — so the data arrives in parallel with the code rather than after it.
+-->
+
+<link rel="stylesheet" href="/api/app.css" id="pre-css">
+<link rel="modulepreload" href="/api/app.js" id="pre-app">
+<link rel="modulepreload" href="/api/devicex.js" id="pre-lib">
+
+<script>
+  // Deliberately blocking and not a module: this runs before the parser reaches
+  // the imports below, which is the whole point. It works out which code was
+  // asked for, starts fetching that shard and the rule table, and leaves the
+  // promises where the module will find them.
+  (function () {
+    var p = decodeURIComponent(location.pathname);
+    var i = p.indexOf('/d/');
+    var base = i >= 0 ? p.slice(0, i + 1) : p.replace(/[^/]*$/, '');
+    window.__dxBase = base;
+
+    document.getElementById('pre-css').href = base + 'api/app.css';
+    document.getElementById('pre-app').href = base + 'api/app.js';
+    document.getElementById('pre-lib').href = base + 'api/devicex.js';
+
+    var code = i >= 0 ? p.slice(i + 3) : new URLSearchParams(location.search).get('code') || '';
+    var warm = {};
+    function get(name) {
+      warm[name] = fetch(base + 'api/' + name).then(function (r) {
+        return r.ok ? r.json() : null;
+      });
+    }
+    get('rules.json');
+    if (code) {
+      var key = '';
+      for (var c of [...code].slice(0, 2)) {
+        var up = c.toUpperCase();
+        key += /[A-Z0-9]/.test(up) ? up : '_';
+      }
+      get(key + '.json');
+    }
+    window.__dxWarm = warm;
+  })();
+</script>
+
+<h1>devicex</h1>
+<p class="sub">A model code, resolved against the catalogue and the code-shape rules. Everything runs in this page; the data is static JSON.</p>
+
+<form>
+  <input id="q" name="code" placeholder="SM-S928B" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+</form>
+
+<p class="verdict" id="verdict"></p>
+<pre id="out">{}</pre>
+<p class="note" id="perma"></p>
+
+<footer>
+  <p id="prov"></p>
+  <p><a href="https://github.com/bakhod1r/devicex">Source and the Go package</a> · <span id="home"></span></p>
+</footer>
+
+<script type="module">
+  const base = window.__dxBase;
+  document.getElementById('home').innerHTML = `<a href="${base}lookup.html">the lookup page</a>`;
+  const app = await import(base + 'api/app.js');
+  app.start();
+</script>
+</html>

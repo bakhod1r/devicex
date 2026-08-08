@@ -1,0 +1,73 @@
+:root {
+  color-scheme: light dark;
+  --fg: #1a1a1a;
+  --dim: #6a6a6a;
+  --line: #d8d8d8;
+  --bg: #fff;
+  --hit: #0a5c2e;
+  --miss: #8a3a12;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6e6e6;
+    --dim: #9a9a9a;
+    --line: #333;
+    --bg: #101010;
+    --hit: #6ede9e;
+    --miss: #f0a878;
+  }
+}
+
+body {
+  max-width: 46rem;
+  margin: 3rem auto;
+  padding: 0 1.2rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1 { font-size: 1.3rem; margin: 0 0 0.2rem; }
+h2 { font-size: 1rem; margin: 2rem 0 0.4rem; }
+p.sub { color: var(--dim); margin: 0 0 1.6rem; }
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.8rem;
+  font: 15px ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+
+pre {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.verdict { margin: 1.4rem 0 0.4rem; font-weight: 600; min-height: 1.6em; }
+.hit { color: var(--hit); }
+.miss { color: var(--miss); }
+
+.note { color: var(--dim); font-size: 13px; margin: 0.5rem 0 0; }
+
+ul { padding-left: 1.1rem; }
+
+footer {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 13px;
+}
+
+a { color: inherit; }

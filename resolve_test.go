@@ -1,4 +1,4 @@
-package adx
+package devicex
 
 import "testing"
 
@@ -30,18 +30,31 @@ func TestResolveCatalogueGainsFormFactor(t *testing.T) {
 	}
 }
 
-// SM-X is a 2022-and-later tablet space the bundled catalogue does not reach.
-// The form factor still resolves; the name correctly does not.
+// A tablet code the catalogue does not hold. The catalogue records no form
+// factor, so this is the shape rule's job: SM-X is a 2022-and-later Galaxy Tab
+// space, and the tablet claim has to survive the name being unknown.
 func TestResolveUncataloguedTablet(t *testing.T) {
-	r, ok := Resolve("SM-X710", "")
+	r, ok := Resolve("SM-X999Z", "")
 	if !ok {
-		t.Fatal("SM-X710: no answer")
+		t.Fatal("SM-X999Z: no answer")
 	}
 	if r.Type != TypeTablet || r.Brand != "Samsung" {
 		t.Errorf("got %q/%q, want Samsung/Tablet", r.Brand, r.Type)
 	}
 	if r.Name != "" {
 		t.Errorf("Name = %q, want empty", r.Name)
+	}
+}
+
+// A catalogued tablet keeps its name and gains the form factor the catalogue
+// does not carry.
+func TestResolveCataloguedTabletKeepsBothAnswers(t *testing.T) {
+	r, ok := Resolve("SM-X710", "")
+	if !ok {
+		t.Fatal("SM-X710: no answer")
+	}
+	if r.Name != "Galaxy Tab S9" || r.Brand != "Samsung" || r.Type != TypeTablet {
+		t.Errorf("got %q/%q/%q, want Galaxy Tab S9/Samsung/Tablet", r.Name, r.Brand, r.Type)
 	}
 }
 
@@ -162,26 +175,35 @@ func TestCodeFeedsLookup(t *testing.T) {
 }
 
 func TestDescribe(t *testing.T) {
-	name, brand, _, _, conf, ok := Describe("SM-G973F", "")
-	if !ok || name != "Galaxy S10" || brand != "Samsung" {
-		t.Errorf("got %q/%q ok=%v, want Galaxy S10/Samsung", name, brand, ok)
+	name, brand, model, _, _, conf, ok := Describe("SM-G973F", "")
+	if !ok || name != "Galaxy S10" || brand != "Samsung" || model != "SM-G973F" {
+		t.Errorf("got %q/%q/%q ok=%v, want Galaxy S10/Samsung/SM-G973F", name, brand, model, ok)
 	}
 	if conf <= 0 {
 		t.Errorf("confidence = %v, want > 0", conf)
 	}
 
 	// The cases Names cannot answer at all.
-	if _, brand, _, _, _, ok := Describe("SM-S999Z", ""); !ok || brand != "Samsung" {
+	if _, brand, _, _, _, _, ok := Describe("SM-S999Z", ""); !ok || brand != "Samsung" {
 		t.Errorf("unknown Samsung code: brand = %q ok = %v", brand, ok)
 	}
-	if name, _, _, typ, _, ok := Describe("", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)"); !ok || name != "iPhone" || typ != "Mobile" {
-		t.Errorf("iPhone: %q/%q ok = %v", name, typ, ok)
+	if name, _, model, _, typ, _, ok := Describe("", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)"); !ok || name != "iPhone" || model != "iPhone" || typ != "Mobile" {
+		t.Errorf("iPhone: %q/%q/%q ok = %v", name, model, typ, ok)
 	}
-	if _, _, _, typ, _, ok := Describe("SM-T870", ""); !ok || typ != "Tablet" {
+	if _, _, _, _, typ, _, ok := Describe("SM-T870", ""); !ok || typ != "Tablet" {
 		t.Errorf("Galaxy Tab: type = %q ok = %v", typ, ok)
 	}
 
-	if _, _, _, _, _, ok := Describe("", ""); ok {
+	// "Macintosh" names a class and no model. The empty model is the claim —
+	// a flat signature that dropped it would leave a consumer inventing one.
+	if name, _, model, _, typ, _, ok := Describe("", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"); !ok || name != "Mac" || model != "" || typ != "Desktop" {
+		t.Errorf("Macintosh: %q/%q/%q ok = %v", name, model, typ, ok)
+	}
+	if _, _, model, _, _, _, ok := Describe("", "Mozilla/5.0 (PlayStation; PlayStation 5/8.00)"); !ok || model != "PlayStation 5" {
+		t.Errorf("PlayStation 5: model = %q ok = %v", model, ok)
+	}
+
+	if _, _, _, _, _, _, ok := Describe("", ""); ok {
 		t.Error("Describe answered on empty input")
 	}
 }

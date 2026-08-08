@@ -1,17 +1,17 @@
-package adx_test
+package devicex_test
 
 import (
 	"testing"
 
-	"github.com/bakhod1r/adx"
+	"github.com/bakhod1r/devicex"
 )
 
 // The cases below were carried over verbatim from data/device.yaml, which used
 // to hold the rules as data. Each one is the User-Agent token a rule claims to
 // recognise, and the brand it claims to recognise it as.
 func TestRulesResolveTheirOwnToken(t *testing.T) {
-	for _, r := range adx.Rules {
-		got, ok := adx.BrandOf(r.Value)
+	for _, r := range devicex.Rules {
+		got, ok := devicex.BrandOf(r.Value)
 		if !ok {
 			t.Errorf("%s: BrandOf(%q) found nothing; the rule recognises a token no shape rule covers", r.ID, r.Value)
 			continue
@@ -23,10 +23,10 @@ func TestRulesResolveTheirOwnToken(t *testing.T) {
 }
 
 func TestRulesAreWellFormed(t *testing.T) {
-	seen := make(map[string]bool, len(adx.Rules))
+	seen := make(map[string]bool, len(devicex.Rules))
 	prev := 1 << 30
 
-	for _, r := range adx.Rules {
+	for _, r := range devicex.Rules {
 		if r.ID == "" {
 			t.Errorf("rule for %q has no ID", r.Value)
 		}
@@ -44,7 +44,7 @@ func TestRulesAreWellFormed(t *testing.T) {
 		// A shape rule with a name would claim to identify a handset it cannot
 		// pin down. A token rule may name a class of machine without a model
 		// code — "Macintosh" is one — so only Model-less shape rules are wrong.
-		if r.Name != "" && r.Model == "" && r.Match == adx.MatchPrefix {
+		if r.Name != "" && r.Model == "" && r.Match == devicex.MatchPrefix {
 			t.Errorf("%s: has Name %q but no Model", r.ID, r.Name)
 		}
 		if r.Confidence <= 0 || r.Confidence > 1 {
@@ -60,8 +60,8 @@ func TestRulesAreWellFormed(t *testing.T) {
 // Shape rules must not name a device. Recognising "SM-" says Samsung built the
 // handset, not which handset it is.
 func TestShapeRulesNameNothing(t *testing.T) {
-	for _, r := range adx.Rules {
-		if r.Match == adx.MatchPrefix && r.Name != "" {
+	for _, r := range devicex.Rules {
+		if r.Match == devicex.MatchPrefix && r.Name != "" {
 			t.Errorf("%s: shape rule names a device (%q)", r.ID, r.Name)
 		}
 	}

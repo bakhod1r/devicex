@@ -1,9 +1,9 @@
-package adx_test
+package devicex_test
 
 import (
 	"testing"
 
-	"github.com/bakhod1r/adx"
+	"github.com/bakhod1r/devicex"
 )
 
 // The rules below were carried over from data/device.yaml, which used to hold
@@ -61,7 +61,7 @@ func TestBrandOfCoversTheImportedRules(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		got, ok := adx.BrandOf(c.code)
+		got, ok := devicex.BrandOf(c.code)
 		if !ok {
 			t.Errorf("BrandOf(%q) identified nothing, want %q", c.code, c.brand)
 			continue
@@ -78,11 +78,11 @@ func TestWeakPrefixesDoNotOutrankRegisteredOnes(t *testing.T) {
 	t.Parallel()
 
 	// "M2" would match this if it were tested before Motorola's "moto ".
-	if b, _ := adx.BrandOf("moto g play 2021"); b != "Motorola" {
+	if b, _ := devicex.BrandOf("moto g play 2021"); b != "Motorola" {
 		t.Errorf("BrandOf(moto g play 2021) = %q", b)
 	}
 	// A catalogue hit must beat every prefix rule.
-	if d, ok := adx.Lookup("SM-G973F"); !ok || d.Brand != "Samsung" {
+	if d, ok := devicex.Lookup("SM-G973F"); !ok || d.Brand != "Samsung" {
 		t.Errorf("Lookup(SM-G973F) = %+v, %v", d, ok)
 	}
 }
@@ -93,7 +93,7 @@ func TestBrandOfRefusesTheUnknown(t *testing.T) {
 	t.Parallel()
 
 	for _, code := range []string{"", "ZZZ-9999", "Mozilla", "Linux", "?"} {
-		if b, ok := adx.BrandOf(code); ok {
+		if b, ok := devicex.BrandOf(code); ok {
 			t.Errorf("BrandOf(%q) = %q, want no match", code, b)
 		}
 	}

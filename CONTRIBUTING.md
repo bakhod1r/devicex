@@ -13,13 +13,13 @@ First off, thank you for considering contributing to ADX! It's people like you t
 To get started with development, you'll need Go 1.26 or higher installed on your machine, as declared in `go.mod`.
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/adx.git`
-3. Enter the directory: `cd adx`
+2. Clone your fork: `git clone https://github.com/your-username/devicex.git`
+3. Enter the directory: `cd devicex`
 4. Run tests to ensure everything works: `make test`
 
 ## Project Structure
 
-- `adx.go`: Contains the core logic for resolving Android device codes.
+- `devicex.go`: Contains the core logic for resolving Android device codes.
 - `brand.go`: Contains brand shape and prefix logic.
 - `rules.go`: Fallback custom device matching logic.
 - `names.go`: Dependency-free accessor for consumers that want only the strings.

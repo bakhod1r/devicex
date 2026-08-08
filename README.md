@@ -1,13 +1,13 @@
-# adx
+# devicex
 
 Android model code → the device it names.
 
 ```go
-d, ok := adx.Lookup("SM-G973F")
+d, ok := devicex.Lookup("SM-G973F")
 // d.Brand = "Samsung", d.Name = "Galaxy S10"
 ```
 
-12,260 devices. ~50 ns per lookup, zero allocations, zero dependencies.
+25,475 devices, snapshot 2026-08-08. ~50 ns per lookup, zero allocations, zero dependencies.
 
 ---
 
@@ -31,29 +31,30 @@ it answers one question, quickly, and admits when it cannot.
 ## Install
 
 ```bash
-go get github.com/bakhod1r/adx
+go get github.com/bakhod1r/devicex
 ```
 
 ## Use
 
 ```go
 // The device, when the catalogue knows it.
-d, ok := adx.Lookup("CPH2451")   // OnePlus 11 5G
+d, ok := devicex.Lookup("CPH2451")   // OnePlus 11 5G
 
 // The manufacturer, which is answerable even when the handset is not.
-brand, ok := adx.BrandOf("SM-S928B")   // "Samsung" — code shape, not a record
+brand, ok := devicex.BrandOf("SM-S928B")   // "Samsung" — code shape, not a record
 
 // Everything, without copying megabytes.
-adx.All(func(d adx.Device) bool {
+devicex.All(func(d devicex.Device) bool {
     if d.Brand == "Sony" {
         fmt.Println(d.Code, d.Name)
     }
     return true
 })
 
-adx.Len()      // 12260
-adx.Brands()   // every manufacturer, sorted
-adx.Source     // where the data came from
+devicex.Len()      // 25475
+devicex.Brands()   // every manufacturer, sorted
+devicex.Source     // where the data came from
+devicex.Version()  // "2026-08-08/25475" — the snapshot the answer came from
 ```
 
 ### Everything at once
@@ -62,13 +63,13 @@ adx.Source     // where the data came from
 rules together, in that order of authority:
 
 ```go
-code := adx.Code("SM-T870 Build/UP1A.231005.007")  // strips the build suffix
+code := devicex.Code("SM-T870 Build/UP1A.231005.007")  // strips the build suffix
 
-r, ok := adx.Resolve(code, ua)
-// r.Name = "Galaxy Tab S7", r.Brand = "Samsung", r.Type = adx.TypeTablet
+r, ok := devicex.Resolve(code, ua)
+// r.Name = "Galaxy Tab S7", r.Brand = "Samsung", r.Type = devicex.TypeTablet
 // r.ID   = "catalog" — what produced the answer
 
-adx.Resolve("", "Mozilla/5.0 (PlayStation; PlayStation 5/9.60) …")
+devicex.Resolve("", "Mozilla/5.0 (PlayStation; PlayStation 5/9.60) …")
 // PlayStation 5 / Sony / Console — hardware that carries no model code
 ```
 
@@ -80,8 +81,49 @@ For a consumer that will not import this package, `Describe` is the same answer
 in a signature naming no type from it:
 
 ```go
-name, brand, family, deviceType, confidence, ok := adx.Describe(code, ua)
+name, brand, model, family, deviceType, confidence, ok := devicex.Describe(code, ua)
 ```
+
+## The same catalogue over HTTP
+
+The Pages site resolves a code in the browser at a plain path — `/d/SM-S928B`.
+There is no server behind it: `404.html` is what Pages returns for a path it
+does not publish, and that page reads the path it was asked for and answers it.
+`/?code=…` and `/#…` resolve the same code and are rewritten to the canonical
+form. The page is only a reader for static JSON under `api/`, and those files
+are the API.
+
+```
+GET api/SM.json       {"SM-S928B": ["Samsung", "Galaxy S24 Ultra"], …}
+GET api/rules.json    the code-shape rules, for codes the catalogue does not hold
+GET api/meta.json     snapshot date, device count, source
+```
+
+A shard is named after the first two characters of a code, uppercased, with
+anything that is not a letter or digit replaced by `_` — so a lookup costs one
+request of a few kilobytes rather than the whole catalogue. `api/devicex.js` is
+an ES module doing the same three-step resolution as the Go package:
+
+```js
+import { Devicex, parseCode } from './api/devicex.js';
+
+const dx = new Devicex('./api/');
+await dx.resolve(parseCode('SM-S928B Build/UP1A.231005.007'));
+// { id: 'catalog', name: 'Galaxy S24 Ultra', brand: 'Samsung', model: 'SM-S928B', confidence: 0.99 }
+```
+
+Rebuild the Go catalogue and the JSON together with `make catalog-full`, and
+serve the site locally with `make site`.
+
+A cold lookup is two round trips, not four: the page requests the shard and the
+rule table from a blocking script before the module that uses them is parsed,
+and the biggest shard — every `SM` code, 2437 of them — is 13 KB gzipped. Shards
+are kept for the tab's session, so a second lookup touches no network at all.
+
+One caveat worth knowing: a `/d/…` URL is served by the 404 fallback, so it
+carries HTTP 404 even when it renders an answer. That is the cost of pretty
+paths on a host that runs nothing. Anything programmatic should read `api/`
+directly, where a hit is a 200 and a miss is a real 404.
 
 ## Two tiers, deliberately separate
 

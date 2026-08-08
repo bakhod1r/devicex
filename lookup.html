@@ -1,0 +1,83 @@
+---
+layout: null
+---
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>devicex — model code lookup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Resolve an Android model code to the device it names. Static JSON, no server.">
+
+<link rel="stylesheet" href="/api/app.css" id="pre-css">
+<link rel="modulepreload" href="/api/app.js" id="pre-app">
+<link rel="modulepreload" href="/api/devicex.js" id="pre-lib">
+
+<script>
+  // Blocking on purpose. It resolves the site base, corrects the preloads, and
+  // starts the rule-table fetch before the module below is parsed, so the data
+  // and the code travel together instead of one after the other.
+  (function () {
+    var p = decodeURIComponent(location.pathname);
+    var i = p.indexOf('/d/');
+    var base = i >= 0 ? p.slice(0, i + 1) : p.replace(/[^/]*$/, '');
+    window.__dxBase = base;
+
+    document.getElementById('pre-css').href = base + 'api/app.css';
+    document.getElementById('pre-app').href = base + 'api/app.js';
+    document.getElementById('pre-lib').href = base + 'api/devicex.js';
+
+    var code = i >= 0 ? p.slice(i + 3) : new URLSearchParams(location.search).get('code') || '';
+    var warm = {};
+    function get(name) {
+      warm[name] = fetch(base + 'api/' + name).then(function (r) {
+        return r.ok ? r.json() : null;
+      });
+    }
+    get('rules.json');
+    if (code) {
+      var key = '';
+      for (var c of [...code].slice(0, 2)) {
+        var up = c.toUpperCase();
+        key += /[A-Z0-9]/.test(up) ? up : '_';
+      }
+      get(key + '.json');
+    }
+    window.__dxWarm = warm;
+  })();
+</script>
+
+<h1>devicex</h1>
+<p class="sub">A model code, resolved against the catalogue and the code-shape rules. Everything runs in this page; the data is static JSON.</p>
+
+<form>
+  <input id="q" name="code" placeholder="SM-S928B" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+</form>
+
+<p class="verdict" id="verdict"></p>
+<pre id="out">{}</pre>
+<p class="note" id="perma"></p>
+
+<h2>The JSON is the API</h2>
+<p>This page is a reader for it. No server is involved, and the same files
+answer a <code>fetch</code> or a <code>curl</code>:</p>
+<ul>
+  <li><code>api/SM.json</code> — every catalogued code starting <code>SM</code>, as <code>{"SM-S928B": ["Samsung", "Galaxy S24 Ultra"]}</code></li>
+  <li><code>api/rules.json</code> — the code-shape rules, for codes the catalogue does not hold</li>
+  <li><code>api/meta.json</code> — snapshot date, device count, source</li>
+  <li><code>api/devicex.js</code> — the client used here, importable as an ES module</li>
+</ul>
+<p>A shard is named after the first two characters of a code, uppercased, with
+anything that is not a letter or a digit replaced by <code>_</code>. A missing
+shard means no catalogued code starts with them.</p>
+<p>A plain path answers too: <code>/d/SM-S928B</code>.</p>
+
+<footer>
+  <p id="prov"></p>
+  <p><a href="https://github.com/bakhod1r/devicex">Source and the Go package</a> · see NOTICE.md for the catalogue's provenance and licence</p>
+</footer>
+
+<script type="module">
+  const app = await import(window.__dxBase + 'api/app.js');
+  app.start();
+</script>
+</html>

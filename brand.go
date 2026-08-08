@@ -1,4 +1,4 @@
-package adx
+package devicex
 
 import "strings"
 
@@ -15,94 +15,19 @@ import "strings"
 // catalogue is right: sub-brands share their parent's code space, which is why
 // "CPH" — OPPO's prefix — also covers OnePlus models.
 
-type prefixBrand struct {
-	prefix string
-	brand  string
-}
-
-// brandPrefixes is ordered longest-first within each first byte, so a more
-// specific prefix is tested before a more general one.
-var brandPrefixes = []prefixBrand{
-	{"SM-", "Samsung"},
-	{"SM_", "Samsung"},
-	{"GT-", "Samsung"},
-	{"SCH-", "Samsung"},
-	{"SPH-", "Samsung"},
-	{"SGH-", "Samsung"},
-	{"SC-", "Samsung"},
-
-	{"CPH", "OPPO"},
-	{"PBE", "OPPO"},
-	{"PCL", "OPPO"},
-
-	{"RMX", "realme"},
-
-	{"Pixel", "Google"},
-
-	{"moto ", "Motorola"},
-	{"XT", "Motorola"},
-
-	{"Redmi", "Xiaomi"},
-	{"POCO", "Xiaomi"},
-	{"MI ", "Xiaomi"},
-
-	{"ELS-", "Huawei"},
-	{"ANA-", "Huawei"},
-	{"VOG-", "Huawei"},
-	{"LYA-", "Huawei"},
-	{"NOH-", "Huawei"},
-
-	{"LM-", "LG"},
-	{"LG-", "LG"},
-
-	{"ONEPLUS", "OnePlus"},
-	{"KB2", "OnePlus"},
-	{"LE2", "OnePlus"},
-
-	{"XQ-", "Sony"},
-
-	// Kindle Fire tablets. Amazon has used KF* since 2012 and ships nothing
-	// else under it.
-	{"KF", "Amazon"},
-
-	{"vivo ", "vivo"},
-
-	{"ASUS_", "Asus"},
-	{"Nokia", "Nokia"},
-	{"Lenovo", "Lenovo"},
-	{"TECNO", "Tecno"},
-	{"Infinix", "Infinix"},
-
-	// Hardware that cannot appear in an Android catalogue but whose tokens
-	// appear in User-Agents constantly. These are whole tokens rather than
-	// allocated prefixes: Apple and the console makers publish no model codes,
-	// so "iPhone" is the entire identifier a request carries. That is why they
-	// resolve a manufacturer and never a model — a caller learns that a
-	// request came from an iPhone, not which one.
-	{"iPhone", "Apple"},
-	{"iPad", "Apple"},
-	{"iPod", "Apple"},
-	{"Macintosh", "Apple"},
-	{"Nintendo Switch", "Nintendo"},
-	{"PlayStation", "Sony"},
-	{"Xbox", "Microsoft"},
-
-	// Xiaomi's unbranded code spaces, tested last because they are the weakest
-	// rules here. "M2" and a leading "22" are shapes Xiaomi has used
-	// consistently, but neither is a reserved prefix the way "SM-" is: they
-	// are a manufacturer's habit, not its namespace. Every other rule above
-	// gets to decide first.
-	{"M2", "Xiaomi"},
-	{"22", "Xiaomi"},
-}
+// There is no separate prefix table here. The code spaces live in Rules, once,
+// and BrandOf reads them through ResolveCode. A second copy would answer the
+// same question from data that drifts: a rule added to Rules but not to the
+// copy makes BrandOf and Resolve disagree about the same code, and nothing in
+// the package would notice.
 
 // BrandOf reports the manufacturer a model code belongs to, and whether the
 // code's shape identified one.
 //
 // The catalogue is consulted first, because a recorded device is stronger
-// evidence than a prefix. Only when the code is unknown does the shape decide,
-// which is what lets a handset released after this release still resolve its
-// maker.
+// evidence than a prefix. Only when the code is unknown do the shape rules
+// decide, which is what lets a handset released after this release still
+// resolve its maker.
 //
 // An unrecognised shape returns "" and false. It never falls back to the most
 // common manufacturer, and never infers a brand from a code's length or
@@ -111,9 +36,17 @@ func BrandOf(code string) (string, bool) {
 	if d, ok := Lookup(code); ok {
 		return d.Brand, true
 	}
-	for _, p := range brandPrefixes {
-		if strings.HasPrefix(code, p.prefix) {
-			return p.brand, true
+	if r, ok := ResolveCode(code); ok {
+		return r.Brand, true
+	}
+	// Consoles name themselves in prose and so are MatchContains rules, which
+	// ResolveCode skips because a model code is not prose. When such prose
+	// arrives in the device field anyway — "PlayStation 5" is the whole
+	// identifier that request carries — the maker is still recoverable, so
+	// they are tested here as prefixes of the code.
+	for _, r := range Rules {
+		if r.Match == MatchContains && strings.HasPrefix(code, r.Value) {
+			return r.Brand, true
 		}
 	}
 	return "", false

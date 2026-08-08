@@ -1,4 +1,4 @@
-package adx
+package devicex
 
 import "strings"
 

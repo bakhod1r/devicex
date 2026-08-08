@@ -1,4 +1,4 @@
-package adx
+package devicex
 
 // Device rules, in Go. This file replaces data/device.yaml.
 //
@@ -14,7 +14,7 @@ package adx
 //     its model codes. These degrade gracefully: a phone released tomorrow
 //     still resolves its brand even though tier 1 has never heard of it.
 //
-// The bulk of tier 1 — 12260 imported model codes — lives in
+// The bulk of tier 1 — 25475 imported model codes — lives in
 // internal/catalog/catalog_gen.go and is reached through Lookup. The rules
 // here are the ones no published Android catalogue carries: Apple hardware,
 // consoles, and the Pixel codes Google ships under their marketing name.
@@ -131,6 +131,12 @@ var Rules = []Rule{
 	// carries a Name and no Model. It sits last of the named rules because a
 	// desktop token is the weakest evidence here.
 	{ID: "macintosh", Name: "Mac", Brand: "Apple", Type: TypeDesktop, Priority: 150, Match: MatchToken, Value: "Macintosh", Confidence: 0.95},
+
+	// A PlayStation whose generation this package does not know. It sits below
+	// the two that name themselves exactly, so it only answers for the ones
+	// they did not: the token identifies Sony and a console, and asserts no
+	// model — which is why it carries neither Name nor Model.
+	{ID: "playstation", Brand: "Sony", Type: TypeConsole, Priority: 145, Match: MatchContains, Value: "PlayStation", Confidence: 0.90},
 
 	// ------------------------------------------------ brand shapes (tier 2)
 	//

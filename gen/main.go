@@ -7,28 +7,42 @@
 // which is why -source is required and is written into the generated file as
 // catalog.Source.
 //
-// Two inputs are understood:
+// Two inputs are understood, and may be combined:
 //
-//	gen -csv supported_devices.csv -source "Google Play Console export, 2026-08-08"
-//	gen -json devices.json         -source "pbakondy/android-device-list (MIT), …"
+//	gen -csv supported_devices.csv -source "Google Play supported devices, 2026-08-08"
+//	gen -md MobileModels/brands    -source "KHwang9883/MobileModels (CC BY-NC-SA 4.0)"
 //
-// The CSV is the Google Play Console device list, which ships as UTF-16LE with
-// a BOM. The JSON is the pbakondy/android-device-list array. Both are reduced
-// to the same three columns; everything else in them is dropped.
+// The CSV is Google Play's supported-devices list, which ships as UTF-16LE with
+// a BOM — the broad source, and the one whose licence permits redistribution.
+// The -md directory is KHwang9883/MobileModels, a hand-maintained set of
+// Markdown pages listing the codes each handset ships under; it reaches the
+// regional variants the Play list omits. Only its English pages are read, and
+// any row naming a device in CJK script is dropped whichever source produced
+// it: a catalogue that answers in two scripts cannot be aggregated, sorted or
+// displayed by one caller.
+//
+// Given both, the CSV decides: where the two disagree about a code, the source
+// that can be redistributed wins, and the Markdown only adds codes the CSV
+// never held. Both are reduced to the same three columns.
+//
+// MobileModels is CC BY-NC-SA 4.0. A catalogue built with -md inherits that —
+// non-commercial, share-alike — which is not the licence of this repository's
+// code. Whoever runs it with -md is choosing that for the generated file.
 package main
 
 import (
 	"encoding/binary"
 	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf16"
 	"unicode/utf8"
 )
@@ -38,10 +52,12 @@ func main() {
 	log.SetPrefix("gen: ")
 
 	var (
-		csvPath  = flag.String("csv", "", "Google Play Console device list (UTF-16LE CSV)")
-		jsonPath = flag.String("json", "", "pbakondy/android-device-list JSON")
-		source   = flag.String("source", "", "citation for the data (required)")
-		out      = flag.String("out", filepath.Join("internal", "catalog", "catalog_gen.go"), "file to write")
+		csvPath = flag.String("csv", "", "Google Play Console device list (UTF-16LE CSV)")
+		mdDir   = flag.String("md", "", "KHwang9883/MobileModels brands/ directory (CC BY-NC-SA 4.0)")
+		source  = flag.String("source", "", "citation for the data (required)")
+		dated   = flag.String("generated", time.Now().UTC().Format("2006-01-02"), "date of the input snapshot, YYYY-MM-DD; not the date of this run unless they are the same")
+		out     = flag.String("out", filepath.Join("internal", "catalog", "catalog_gen.go"), "file to write")
+		web     = flag.String("web", "", "also write the static lookup API (sharded JSON) into this directory")
 	)
 	flag.Parse()
 
@@ -51,22 +67,34 @@ func main() {
 	if strings.TrimSpace(*source) == "" {
 		log.Fatal("-source is required: cite where the data came from")
 	}
-	if (*csvPath == "") == (*jsonPath == "") {
-		log.Fatal("give exactly one of -csv or -json")
+	// A catalogue's age is the first thing a caller asks about a wrong answer,
+	// so the date is shipped as data rather than left in a commit message. A
+	// malformed one would be worse than none: it would read as a fact.
+	if _, err := time.Parse("2006-01-02", *dated); err != nil {
+		log.Fatalf("-generated must be YYYY-MM-DD: %v", err)
+	}
+	if *csvPath == "" && *mdDir == "" {
+		log.Fatal("give -csv, -md, or both")
 	}
 
-	var (
-		rows []Entry
-		err  error
-	)
-	switch {
-	case *csvPath != "":
-		rows, err = readCSV(*csvPath)
-	default:
-		rows, err = readJSON(*jsonPath)
+	// Order matters: clean keeps the first row it sees for a code, so the CSV
+	// is read first and the Markdown can only fill gaps.
+	var rows []Entry
+	if *csvPath != "" {
+		r, err := readCSV(*csvPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s: %d rows\n", *csvPath, len(r))
+		rows = append(rows, r...)
 	}
-	if err != nil {
-		log.Fatal(err)
+	if *mdDir != "" {
+		r, err := readMarkdown(*mdDir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s: %d rows\n", *mdDir, len(r))
+		rows = append(rows, r...)
 	}
 
 	entries, dropped := clean(rows)
@@ -74,8 +102,13 @@ func main() {
 		log.Fatal("no usable rows in input")
 	}
 
-	if err := write(*out, *source, entries); err != nil {
+	if err := write(*out, *source, *dated, entries); err != nil {
 		log.Fatal(err)
+	}
+	if *web != "" {
+		if err := writeWeb(*web, *source, *dated, entries); err != nil {
+			log.Fatal(err)
+		}
 	}
 	fmt.Printf("%s: %d devices, %d rows dropped\n", *out, len(entries), dropped)
 }
@@ -152,25 +185,116 @@ func readCSV(path string) ([]Entry, error) {
 	return rows, nil
 }
 
-// readJSON reads the pbakondy/android-device-list array.
-func readJSON(path string) ([]Entry, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+// mdPages are the MobileModels pages this importer reads and the brand each one
+// reports.
+//
+// English pages only. The repository also documents the domestic Chinese
+// variants, and those pages name them in Chinese — which is the only name they
+// have, but not a string an English-language report can aggregate by. A
+// catalogue that answers half its callers in a script they cannot read is worse
+// than one that answers nothing, so those pages are not read — and clean drops
+// any row carrying CJK text regardless of which source produced it.
+//
+// The set is explicit rather than derived from the filenames, because a
+// filename is not a brand — "zhixuan" is a Huawei sub-brand, "mitv_cn" is
+// Xiaomi's televisions, "360shouji" is 360. Pages added upstream after this was
+// written are skipped until someone looks at them: a new file has to be read
+// before its rows are believed.
+//
+// Apple's page is deliberately absent. It keys devices by their regulatory
+// "A1429" numbers, which no User-Agent carries, so importing them would add 400
+// codes that can never match and can only collide with some other
+// manufacturer's real ones.
+var mdPages = []struct {
+	file  string
+	brand string
+}{
+	{"asus_en.md", "Asus"},
+	{"blackshark_en.md", "Black Shark"},
+	{"google.md", "Google"},
+	{"honor_global_en.md", "Honor"},
+	{"huawei_global_en.md", "Huawei"},
+	{"meizu_en.md", "Meizu"},
+	{"mitv_global_en.md", "Xiaomi"},
+	{"nothing.md", "Nothing"},
+	{"oneplus_en.md", "OnePlus"},
+	{"oppo_global_en.md", "OPPO"},
+	{"realme_global_en.md", "realme"},
+	{"samsung_global_en.md", "Samsung"},
+	{"sony.md", "Sony"},
+	{"vivo_global_en.md", "vivo"},
+	{"xiaomi_en.md", "Xiaomi"},
+}
 
-	var list []struct {
-		Brand string `json:"brand"`
-		Name  string `json:"name"`
-		Model string `json:"model"`
-	}
-	if err := json.Unmarshal(raw, &list); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", path, err)
-	}
+// mdEntry matches one MobileModels model line:
+//
+//	`SM-G973F`: Galaxy S10 Global
+//	`CPH1871` `CPH1875`: OPPO Find X
+//
+// The codes are backquoted and there may be several, all naming the same
+// handset; everything after the colon is the name. Lines that are not this
+// shape — headings, the codename lines in bold, prose — carry no model code and
+// are skipped.
+var mdEntry = regexp.MustCompile("^((?:`[^`]+` *)+): *(.+)$")
 
-	rows := make([]Entry, 0, len(list))
-	for _, d := range list {
-		rows = append(rows, Entry{Code: d.Model, Brand: d.Brand, Name: d.Name})
+// mdQualifiers are the market and SIM-configuration suffixes MobileModels
+// appends to a device's name: "Galaxy S10 Global", "Galaxy S10 South Korea",
+// "HUAWEI Mate 8 Dual SIM". They belong to the code, not to the device — the
+// code is what distinguishes those variants, and it is the catalogue's key —
+// and leaving them on means the same handset appears under a dozen different
+// names, none of which is what it is sold as.
+//
+// The list is closed and matched only at the end of a name. Trimming a known
+// qualifier drops a fact the code already carries; anything cleverer would be
+// rewriting a marketing name, which this importer does not do.
+var mdQualifiers = []string{
+	"Global", "China mainland", "China", "India", "Japan", "Taiwan",
+	"Hong Kong", "South Korea", "Canada", "US Carrier", "US Unlocked",
+	"Dual SIM", "Single SIM",
+}
+
+// trimQualifier removes the qualifiers from the end of a name, repeatedly: a
+// few rows carry two ("Galaxy A52s 5G Global Dual SIM").
+func trimQualifier(name string) string {
+	for again := true; again; {
+		again = false
+		for _, q := range mdQualifiers {
+			if trimmed, ok := strings.CutSuffix(name, " "+q); ok {
+				name, again = strings.TrimSpace(trimmed), true
+			}
+		}
+	}
+	return name
+}
+
+// readMarkdown reads the MobileModels brands/ directory.
+//
+// The pages are hand-written prose, so this parses conservatively: a line that
+// does not have the exact shape above is dropped rather than guessed at. The
+// alternative — recovering names from headings — would invent rows, and a wrong
+// device name is the one thing this package must never produce.
+func readMarkdown(dir string) ([]Entry, error) {
+	var rows []Entry
+	for _, page := range mdPages {
+		raw, err := os.ReadFile(filepath.Join(dir, page.file))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w (is this MobileModels/brands?)", page.file, err)
+		}
+
+		for _, line := range strings.Split(string(raw), "\n") {
+			m := mdEntry.FindStringSubmatch(strings.TrimSpace(line))
+			if m == nil {
+				continue
+			}
+			device := trimQualifier(strings.TrimSpace(m[2]))
+			for _, code := range strings.Split(m[1], "`") {
+				code = strings.TrimSpace(code)
+				if code == "" {
+					continue
+				}
+				rows = append(rows, Entry{Code: code, Brand: page.brand, Name: device})
+			}
+		}
 	}
 	return rows, nil
 }
@@ -237,6 +361,16 @@ var brands = map[string]string{
 	"oneplus technology":  "OnePlus",
 	"guangdong oppo":      "OPPO",
 	"oppo mobile":         "OPPO",
+
+	// The Play export capitalises these as ordinary words; the companies do
+	// not. A caller aggregating by brand must not get "Oppo" and "OPPO" as two
+	// manufacturers, so the spelling is decided here.
+	"oppo":            "OPPO",
+	"vivo":            "vivo",
+	"realme":          "realme",
+	"realme techlife": "realme",
+	"tecno":           "Tecno",
+	"tecno mobile":    "Tecno",
 }
 
 // clean applies every transformation between the upstream rows and the shipped
@@ -277,6 +411,16 @@ func clean(rows []Entry) (out []Entry, dropped int) {
 		case strings.ContainsAny(code, "\"\\\n\r\t"):
 			dropped++
 			continue
+
+		// A name in Chinese, Japanese or Korean script. Sources that document
+		// domestic-market handsets carry these, and they are the only names
+		// those devices have — but a catalogue whose answers switch script
+		// halfway through cannot be aggregated, sorted or displayed by a caller
+		// expecting one language. Dropping the row is honest; transliterating
+		// it would be this package inventing a marketing name.
+		case hasCJK(name) || hasCJK(code):
+			dropped++
+			continue
 		}
 
 		if seen[code] {
@@ -294,6 +438,23 @@ func clean(rows []Entry) (out []Entry, dropped int) {
 	return out, dropped
 }
 
+// hasCJK reports whether s contains a Han, Hiragana, Katakana or Hangul rune.
+func hasCJK(s string) bool {
+	for _, r := range s {
+		switch {
+		case r >= 0x3000 && r <= 0x303F, // CJK punctuation
+			r >= 0x3040 && r <= 0x30FF, // kana
+			r >= 0x3400 && r <= 0x4DBF, // Han extension A
+			r >= 0x4E00 && r <= 0x9FFF, // Han
+			r >= 0xAC00 && r <= 0xD7AF, // Hangul
+			r >= 0xF900 && r <= 0xFAFF, // Han compatibility
+			r >= 0xFF01 && r <= 0xFF60: // fullwidth forms
+			return true
+		}
+	}
+	return false
+}
+
 func normaliseBrand(b string) string {
 	b = strings.TrimSpace(b)
 	if canonical, ok := brands[strings.ToLower(b)]; ok {
@@ -302,10 +463,10 @@ func normaliseBrand(b string) string {
 	return b
 }
 
-func write(path, source string, entries []Entry) error {
+func write(path, source, dated string, entries []Entry) error {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, `// Code generated by adx/gen. DO NOT EDIT.
+	fmt.Fprintf(&b, `// Code generated by devicex/gen. DO NOT EDIT.
 //
 // Android device catalogue: model code to marketing name.
 //
@@ -316,7 +477,7 @@ func write(path, source string, entries []Entry) error {
 // absent from the catalogue and resolves no name at all — never an approximate
 // one, because a wrong device name is worse than none.
 //
-// %d devices, sorted by code so Lookup can binary search.
+// Snapshot: %s. %d devices, sorted by code so Lookup can binary search.
 
 package catalog
 
@@ -330,9 +491,15 @@ type Entry struct {
 // Source cites where Entries came from.
 const Source = %q
 
+// Generated is the date of the snapshot Entries was built from, YYYY-MM-DD.
+// It is the age of the data, not of the build: a catalogue imported today from
+// a source frozen two years ago carries the source's date, because that is
+// what decides which handsets are missing.
+const Generated = %q
+
 // Entries is sorted by Code.
 var Entries = [...]Entry{
-`, source, len(entries), source)
+`, source, dated, len(entries), source, dated)
 
 	for _, e := range entries {
 		fmt.Fprintf(&b, "\t{%q, %q, %q},\n", e.Code, e.Brand, e.Name)
