@@ -1,3 +1,7 @@
+---
+title: Contributing
+---
+
 # Contributing to ADX
 
 First off, thank you for considering contributing to ADX! It's people like you that make ADX such a great tool for the Go community.

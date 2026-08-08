@@ -1,22 +1,43 @@
 title: devicex — Android device catalogue
 description: 25475 Android model codes resolved to their marketing names, in Go and as static JSON.
 theme: jekyll-theme-primer
-show_downloads: true
+show_downloads: false
+
 github:
   is_project_page: true
   repository_url: https://github.com/bakhod1r/devicex
 
-# Navigation configuration
+# index.md is the landing page and claims "/" through its own permalink; the
+# rest are the repository's documents, rendered as they are.
 header_pages:
   - README.md
   - CHANGELOG.md
+  - NOTICE.md
   - CONTRIBUTING.md
   - SECURITY.md
   - CODE_OF_CONDUCT.md
-  - NOTICE.md
 
+# The lookup pages carry their own markup and must not be wrapped in the theme
+# layout: 404.html is the router, and a theme header around it would load a
+# second stylesheet in front of an answer that is meant to be immediate.
+defaults:
+  - scope:
+      path: "api"
+    values:
+      layout: null
+      sitemap: false
+
+# Everything that is source rather than site. api/ is deliberately absent from
+# this list: those files are the published lookup API, and the site is how they
+# are served.
 exclude:
   - "*.go"
+  - "*.csv"
   - go.mod
+  - go.sum
   - Makefile
+  - gen/
+  - internal/
   - docs/
+  - vendor/
+  - .github/

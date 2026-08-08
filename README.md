@@ -1,3 +1,7 @@
+---
+title: devicex — the Go package
+---
+
 # devicex
 
 Android model code → the device it names.

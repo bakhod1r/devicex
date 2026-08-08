@@ -1,3 +1,7 @@
+---
+title: Third-party data and licences
+---
+
 # Third-party data
 
 The Go code in this repository is original. The catalogue it ships is not.

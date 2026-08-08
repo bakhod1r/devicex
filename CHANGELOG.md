@@ -1,3 +1,7 @@
+---
+title: Changelog
+---
+
 # Changelog
 
 The catalogue and the code version together, because a lookup result is only
