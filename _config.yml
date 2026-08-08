@@ -1,0 +1,21 @@
+title: ADX - Android Device Resolver
+description: A fast, offline, and reliable Android device catalogue and code resolver for Go.
+theme: jekyll-theme-primer
+show_downloads: true
+github:
+  is_project_page: true
+  repository_url: https://github.com/bakhod1r/adx
+
+# Navigation configuration
+header_pages:
+  - README.md
+  - CHANGELOG.md
+  - CONTRIBUTING.md
+  - SECURITY.md
+  - CODE_OF_CONDUCT.md
+
+exclude:
+  - "*.go"
+  - go.mod
+  - Makefile
+  - docs/

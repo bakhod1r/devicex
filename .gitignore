@@ -1,0 +1,9 @@
+*.test
+*.out
+bench.txt
+
+# Catalogue exports are inputs to `make catalog`, not part of the repository:
+# they are large and belong to whoever published them. The generated
+# internal/catalog is the artefact worth committing.
+*.csv
+*.json
