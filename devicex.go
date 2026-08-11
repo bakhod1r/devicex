@@ -113,6 +113,21 @@ func LookupFold(code string) (Device, bool) {
 // Len is how many devices the catalogue holds.
 func Len() int { return len(catalog.Entries) }
 
+// At returns the i'th device in code order. It reports false when i is out of
+// range.
+//
+// Len and At together let a caller address one device without materialising
+// the catalogue: picking a random handset needs an index, and All, being
+// iteration only, forces a caller to spill all 25,475 entries into a slice
+// first. At costs nothing.
+func At(i int) (Device, bool) {
+	if i < 0 || i >= len(catalog.Entries) {
+		return Device{}, false
+	}
+	e := catalog.Entries[i]
+	return Device{Code: e.Code, Brand: e.Brand, Name: e.Name}, true
+}
+
 // All calls fn for every device, in code order. It is a range function rather
 // than a returned slice because the catalogue is large and copying it to
 // answer "which devices does Samsung make" would allocate megabytes.

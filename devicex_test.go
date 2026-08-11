@@ -96,6 +96,28 @@ func TestAll(t *testing.T) {
 	}
 }
 
+func TestAt(t *testing.T) {
+	t.Parallel()
+
+	// At must agree with All: same devices, same order.
+	i := 0
+	devicex.All(func(want devicex.Device) bool {
+		got, ok := devicex.At(i)
+		if !ok || got != want {
+			t.Errorf("At(%d) = %+v, %v; All gave %+v", i, got, ok, want)
+			return false
+		}
+		i++
+		return true
+	})
+
+	for _, i := range []int{-1, devicex.Len(), devicex.Len() + 1} {
+		if d, ok := devicex.At(i); ok {
+			t.Errorf("At(%d) = %+v, want out of range", i, d)
+		}
+	}
+}
+
 func TestNames(t *testing.T) {
 	t.Parallel()
 
